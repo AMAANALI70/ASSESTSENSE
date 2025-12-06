@@ -1,16 +1,76 @@
-# React + Vite
+# AssetSense - Industrial Predictive Maintenance Dashboard 🏭
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AssetSense is a high-fidelity simulated industrial dashboard designed for monitoring the health and performance of critical machinery. It features real-time data visualization, fault injection capabilities, and a premium "Dark Industrial" aesthetic.
 
-Currently, two official plugins are available:
+![AssetSense Dashboard](https://via.placeholder.com/800x450.png?text=AssetSense+Dashboard+Preview)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Features
 
-## React Compiler
+### 📊 Real-Time Monitoring
+- **Live Metrics**: Monitor Temperature, Vibration, and Current for 4 distinct nodes (Pump, Motor, Compressor, Spare).
+- **Health Index**: ML-based health scoring algorithm that reacts to sensor drifts.
+- **Visual Feedback**: LED status indicators, animated gauges, and dynamic trend charts.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### ⚠️ Fault Simulation Engine
+- **Interactive Console**: Inject specific faults like **Overheating**, **Bearing Wear**, **Misalignment**, and **Overload**.
+- **Realistic Physics**: Sensor values drift realistically based on the injected fault type.
+- **Maintenance Workflow**: Repair nodes to reset their health and restore normal operation.
+- **Auto-Protect**: System automatically fails over to a Spare Node when a critical fault is detected.
 
-## Expanding the ESLint configuration
+### 🎨 Premium UI/UX
+- **Industrial Design**: Custom "Dark Industrial" theme with neon accents and glassmorphism effects.
+- **Machine Animations**: Detailed CSS/SVG animations for different machine types (rotating impellers, pistons, rotors).
+- **Micro-Interactions**: Hover effects, pulse animations, and smooth transitions.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 📈 Advanced Views
+- **Analytics**: Historical trends, Node Comparison Radar Chart, and RUL (Remaining Useful Life) forecast.
+- **Team Management**: Manage operator access and view activity logs.
+- **Settings**: Configure system units, theme intensity, and data retention.
+
+## 🛠️ Tech Stack
+
+- **Framework**: React 18 + Vite
+- **Styling**: Vanilla CSS (Variables & Keyframes) - *No Tailwind*
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **State Management**: React Hooks (`useSimulation`) + LocalStorage Persistence
+
+## 📦 Installation & Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/assetsense.git
+   cd assetsense
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for production**
+   ```bash
+   npm run build
+   ```
+
+## 🎮 How to Use
+
+1. **Dashboard**: Observe the 4 main nodes. Green = Healthy, Yellow = Warning, Red = Critical.
+2. **Inject a Fault**:
+   - Scroll down to the **Fault Injection Console**.
+   - Select a Target Machine (e.g., "Pump 01").
+   - Select a Fault Type (e.g., "Overheating").
+   - Click **INJECT FAULT**.
+   - Watch the sensor values rise and the node card react!
+3. **Repair**:
+   - Click **Repair & Reset** in the console to fix the node.
+4. **Analyze**: Navigate to the **Analytics** page to see the impact of your faults on the system's history.
+
+## 📄 License
+
+MIT License - Free for educational and personal use.
