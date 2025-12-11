@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { sendCriticalAlert } from '../services/emailService';
 
 const NODES_CONFIG = [
     { id: 1, name: 'Pump 01', type: 'pump' },
@@ -48,6 +49,9 @@ export const useSimulation = () => {
     });
 
     const [activeFault, setActiveFault] = useState(null); // { nodeId, type, startTime }
+
+    // Track sent emails to avoid spam (Transient state, not persisted)
+    const emailSentFlags = useRef({});
 
     useEffect(() => {
         localStorage.setItem('assetsense_nodes', JSON.stringify(nodes));
@@ -140,10 +144,44 @@ export const useSimulation = () => {
                         }
                     ];
 
-                    // Alerts
+                    // --- EMAIL ALERT LOGIC ---
+                    // Trigger if Essential Criteria Met: Critical Status AND Not yet sent for this event
                     if (status === 'critical' && node.status !== 'critical') {
+                        // Just entered critical state - add UI Alert
                         addAlert(node.name, `CRITICAL FAILURE: ${fault}`, 'critical');
                     }
+
+                    if (status === 'critical' && !emailSentFlags.current[node.id]) {
+                        // Prepare Alert Packet
+                        const alertPacket = {
+                            nodeName: node.name,
+                            health: calculatedHealth,
+                            temp: newTemp,
+                            vib: newVib,
+                            current: newCurrent,
+                            fault: fault !== 'None' ? fault : 'Unknown Critical Anomaly',
+                            rul: newRul,
+                            timestamp: new Date().toLocaleString(),
+                            action: 'Inspect Immediately. Prepare for safe shutdown if vibration > 5mm/s.',
+                        };
+
+                        // Send Email (Fire & Forget)
+                        sendCriticalAlert(alertPacket).then(success => {
+                            if (success) {
+                                addAlert(node.name, `Email Notification Sent to Admin`, 'info', true);
+                            }
+                        });
+
+                        // Set Flag to prevent spam
+                        emailSentFlags.current[node.id] = true;
+                    }
+
+                    // Reset Flag if node recovers (Health > 70 to avoid flickering at 60 boundary)
+                    if (status !== 'critical' && calculatedHealth > 70 && emailSentFlags.current[node.id]) {
+                        emailSentFlags.current[node.id] = false;
+                        addAlert(node.name, `System Recovered - Email Triggers Reset`, 'success');
+                    }
+                    // -------------------------
 
                     return {
                         ...node,
@@ -189,13 +227,14 @@ export const useSimulation = () => {
         return () => clearInterval(interval);
     }, [activeFault]);
 
-    const addAlert = (source, message, severity = 'warning') => {
+    const addAlert = (source, message, severity = 'warning', emailSent = false) => {
         const newAlert = {
             id: Date.now(),
             source,
             message,
             time: new Date().toLocaleTimeString(),
-            severity
+            severity,
+            emailSent // Metadata for UI badge
         };
         setAlerts(prev => [newAlert, ...prev].slice(0, 10));
     };
@@ -207,6 +246,18 @@ export const useSimulation = () => {
 
     const repairNode = (nodeId) => {
         setActiveFault(null);
+        // Reset email flag immediately upon repair
+        if (emailSentFlags.current[nodeId]) {
+            emailSentFlags.current[nodeId] = false;
+        }
+
+        const targetNode = nodes.find(n => n.id === nodeId);
+        if (targetNode) {
+            setAlerts(prev => prev.filter(alert =>
+                !(alert.source === targetNode.name && alert.severity === 'critical')
+            ));
+        }
+
         setNodes(prev => prev.map(n => {
             if (n.id === nodeId) {
                 return {

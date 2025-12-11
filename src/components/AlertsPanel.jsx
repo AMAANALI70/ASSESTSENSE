@@ -32,13 +32,41 @@ const AlertsPanel = ({ alerts }) => {
                     alerts.map(alert => (
                         <div key={alert.id} style={{
                             padding: '0.75rem',
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            borderLeft: '3px solid var(--status-critical)',
+                            background: alert.severity === 'critical' ? 'rgba(239, 68, 68, 0.1)' :
+                                alert.severity === 'success' ? 'rgba(34, 197, 94, 0.1)' :
+                                    alert.severity === 'info' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                            borderLeft: `3px solid ${alert.severity === 'critical' ? 'var(--status-critical)' :
+                                alert.severity === 'success' ? 'var(--status-healthy)' :
+                                    alert.severity === 'info' ? 'var(--accent-primary)' : 'var(--status-warning)'}`,
                             borderRadius: '4px'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                <AlertTriangle size={16} color="var(--status-critical)" />
-                                <span style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--status-critical)' }}>{alert.source}</span>
+                                <AlertTriangle size={16} color={
+                                    alert.severity === 'critical' ? 'var(--status-critical)' :
+                                        alert.severity === 'success' ? 'var(--status-healthy)' :
+                                            alert.severity === 'info' ? 'var(--accent-primary)' : 'var(--status-warning)'
+                                } />
+                                <span style={{
+                                    fontWeight: '600', fontSize: '0.9rem', color:
+                                        alert.severity === 'critical' ? 'var(--status-critical)' :
+                                            alert.severity === 'success' ? 'var(--status-healthy)' :
+                                                alert.severity === 'info' ? 'var(--accent-primary)' : 'var(--status-warning)'
+                                }}>{alert.source}</span>
+                                {alert.emailSent && (
+                                    <div style={{
+                                        marginLeft: 'auto',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        fontSize: '0.7rem',
+                                        background: 'var(--accent-primary)',
+                                        color: 'white',
+                                        padding: '2px 6px',
+                                        borderRadius: '12px'
+                                    }}>
+                                        <Bell size={12} /> Email Sent
+                                    </div>
+                                )}
                             </div>
                             <div style={{ fontSize: '0.9rem' }}>{alert.message}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{alert.time}</div>
