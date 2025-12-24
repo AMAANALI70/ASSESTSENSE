@@ -1,76 +1,291 @@
-# AssetSense - Industrial Predictive Maintenance Dashboard 🏭
+🏭 AssetSense – Industrial Predictive Maintenance Platform
 
-AssetSense is a high-fidelity simulated industrial dashboard designed for monitoring the health and performance of critical machinery. It features real-time data visualization, fault injection capabilities, and a premium "Dark Industrial" aesthetic.
+AssetSense is a high-fidelity Industrial Predictive Maintenance platform designed to demonstrate how modern Industry 4.0 systems monitor machine health, detect faults early, and prevent unplanned downtime.
 
-![AssetSense Dashboard](https://via.placeholder.com/800x450.png?text=AssetSense+Dashboard+Preview)
+The project combines real-time data processing, edge intelligence, and a professional industrial dashboard to simulate (and extend toward) real-world predictive maintenance workflows used in manufacturing plants, energy systems, and process industries.
 
-## 🚀 Features
+AssetSense is intentionally designed to be simulation-driven at the UI level, while remaining architecture-accurate and hardware-ready for real ESP32-based deployments.
 
-### 📊 Real-Time Monitoring
-- **Live Metrics**: Monitor Temperature, Vibration, and Current for 4 distinct nodes (Pump, Motor, Compressor, Spare).
-- **Health Index**: ML-based health scoring algorithm that reacts to sensor drifts.
-- **Visual Feedback**: LED status indicators, animated gauges, and dynamic trend charts.
+🎯 Project Motivation
 
-### ⚠️ Fault Simulation Engine
-- **Interactive Console**: Inject specific faults like **Overheating**, **Bearing Wear**, **Misalignment**, and **Overload**.
-- **Realistic Physics**: Sensor values drift realistically based on the injected fault type.
-- **Maintenance Workflow**: Repair nodes to reset their health and restore normal operation.
-- **Auto-Protect**: System automatically fails over to a Spare Node when a critical fault is detected.
+In real industrial environments:
 
-### 🎨 Premium UI/UX
-- **Industrial Design**: Custom "Dark Industrial" theme with neon accents and glassmorphism effects.
-- **Machine Animations**: Detailed CSS/SVG animations for different machine types (rotating impellers, pistons, rotors).
-- **Micro-Interactions**: Hover effects, pulse animations, and smooth transitions.
+Unexpected machine failures cause massive production losses
 
-### 📈 Advanced Views
-- **Analytics**: Historical trends, Node Comparison Radar Chart, and RUL (Remaining Useful Life) forecast.
-- **Team Management**: Manage operator access and view activity logs.
-- **Settings**: Configure system units, theme intensity, and data retention.
+Reactive maintenance is unsafe and expensive
 
-## 🛠️ Tech Stack
+Scheduled maintenance often replaces healthy components unnecessarily
 
-- **Framework**: React 18 + Vite
-- **Styling**: Vanilla CSS (Variables & Keyframes) - *No Tailwind*
-- **Charts**: Recharts
-- **Icons**: Lucide React
-- **State Management**: React Hooks (`useSimulation`) + LocalStorage Persistence
+Predictive Maintenance (PdM) solves this by:
 
-## 📦 Installation & Setup
+Continuously monitoring machine condition
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/assetsense.git
-   cd assetsense
-   ```
+Detecting early degradation patterns
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+Acting before catastrophic failure occurs
 
-3. **Run the development server**
-   ```bash
-   npm run dev
-   ```
+🚀 AssetSense was built to:
 
-4. **Build for production**
-   ```bash
-   npm run build
-   ```
+Demonstrate predictive maintenance concepts clearly
 
-## 🎮 How to Use
+Showcase edge-cloud industrial architecture
 
-1. **Dashboard**: Observe the 4 main nodes. Green = Healthy, Yellow = Warning, Red = Critical.
-2. **Inject a Fault**:
-   - Scroll down to the **Fault Injection Console**.
-   - Select a Target Machine (e.g., "Pump 01").
-   - Select a Fault Type (e.g., "Overheating").
-   - Click **INJECT FAULT**.
-   - Watch the sensor values rise and the node card react!
-3. **Repair**:
-   - Click **Repair & Reset** in the console to fix the node.
-4. **Analyze**: Navigate to the **Analytics** page to see the impact of your faults on the system's history.
+Simulate realistic machine degradation and faults
 
-## 📄 License
+Provide a decision-support dashboard, not just charts
 
-MIT License - Free for educational and personal use.
+Serve as a bridge between academic IoT concepts and real industry systems
+
+🧠 What AssetSense Does
+
+AssetSense continuously monitors three critical machine parameters:
+
+Temperature
+
+Vibration
+
+Current
+
+Using these signals, it:
+
+Computes a Health Index (0–100%)
+
+Detects fault patterns such as:
+
+Overheating
+
+Bearing Wear
+
+Misalignment
+
+Overload
+
+Estimates Remaining Useful Life (RUL)
+
+Automatically triggers Auto-Protect by switching to a Spare Node when a machine becomes critical
+
+Escalates alerts via email notifications
+
+All logic mirrors real industrial predictive maintenance systems, even though sensor data is currently simulated.
+
+🏗️ System Architecture (High Level)
+
+AssetSense follows a Hybrid Edge–Cloud Industrial IoT Architecture:
+
+🔹 On-Device (Conceptual / Real-Ready)
+
+ESP32 controller per machine
+
+Temperature, vibration, and current sensors
+
+Relay/contactor for machine control
+
+🔹 Edge Intelligence
+
+Health scoring
+
+Fault classification
+
+Degradation tracking
+
+Auto-Protect logic (safety-critical)
+
+🔹 Cloud / Backend
+
+Email alerts only
+
+No control logic in the cloud
+
+Control decisions are edge-local, ensuring low latency and safety.
+
+🧩 Hardware Components (Real Deployment Ready)
+
+Although AssetSense currently simulates sensor data, it is fully compatible with real hardware.
+
+🔧 Per Machine Node
+
+ESP32 Dev Board (ESP32-WROOM / DevKitC)
+
+Temperature Sensor (DS18B20 / PT100)
+
+Vibration Sensor (MPU6050 / ADXL345)
+
+Current Sensor (ACS712 / SCT-013)
+
+Relay / Contactor Module
+
+Power Supply (5V / Industrial DC)
+
+🖥️ Edge System
+
+Industrial PC / Server / Laptop
+
+MQTT / HTTP / WebSocket support
+
+Local network (Ethernet / Wi-Fi)
+
+☁️ Backend
+
+Node.js + Express
+
+SMTP Email Service (Nodemailer)
+
+🚀 Features
+📊 Real-Time Monitoring
+
+Live Temperature, Vibration, and Current for:
+
+Pump
+
+Motor
+
+Compressor
+
+Spare Node
+
+Composite Health Index
+
+Dynamic state changes (Healthy / Warning / Critical)
+
+⚠️ Fault Simulation Engine
+
+Inject faults:
+
+Overheating
+
+Bearing Wear
+
+Misalignment
+
+Overload
+
+Physics-inspired signal drift
+
+Repair workflow to restore machines
+
+Auto-Protect with Spare Node activation
+
+🎨 Industrial-Grade UI/UX
+
+Dark Industrial theme
+
+Animated machine visuals
+
+LED-style status indicators
+
+Smooth micro-interactions
+
+Designed for control room displays
+
+📈 Advanced Analytics
+
+Historical sensor trends
+
+Node comparison radar chart
+
+Remaining Useful Life (RUL) estimation
+
+Operator activity visibility
+
+🛠️ Technology Stack
+Frontend
+
+React 18 + Vite
+
+Vanilla CSS (Variables & Keyframes)
+
+Recharts (data visualization)
+
+Lucide React (icons)
+
+State & Logic
+
+Custom React Hook: useSimulation
+
+LocalStorage persistence
+
+Deterministic physics-based modeling
+
+Backend
+
+Node.js
+
+Express.js
+
+Nodemailer (SMTP email alerts)
+
+📦 Installation & Setup
+1️⃣ Clone the Repository
+git clone https://github.com/yourusername/assetsense.git
+cd assetsense
+
+2️⃣ Install Dependencies
+npm install
+
+3️⃣ Run the Frontend
+npm run dev
+
+4️⃣ Run the Backend (Email Alerts)
+cd server
+node index.js
+
+🎮 How to Use AssetSense
+
+Observe the Dashboard
+
+Green → Healthy
+
+Yellow → Warning
+
+Red → Critical
+
+Inject a Fault
+
+Open Fault Injection Console
+
+Select Machine
+
+Select Fault Type
+
+Inject and observe degradation
+
+Auto-Protect in Action
+
+When health < 60%, system switches to Spare Node automatically
+
+Repair & Recover
+
+Repair the faulty node
+
+Health restores
+
+Spare is released
+
+🔮 Future Enhancements
+
+Real ESP32 sensor integration (hardware-in-loop)
+
+MQTT / OPC-UA industrial protocol support
+
+Edge gateway deployment (Raspberry Pi / IPC)
+
+Digital Twin visualization (3D models)
+
+Federated learning across multiple plants
+
+👨‍🎓 Who This Project Is For
+
+IoT & Embedded Systems students
+
+Industry 4.0 learners
+
+Predictive maintenance demonstrations
+Academic projects & capstones
+
+Interview & portfolio showcase
+
+📄 License
+
+MIT License
+Free for educational and personal use.
+
