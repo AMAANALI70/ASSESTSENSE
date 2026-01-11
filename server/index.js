@@ -5,8 +5,13 @@ import dotenv from 'dotenv';
 import http from 'http';
 import { Server } from 'socket.io';
 import mqtt from 'mqtt';
+import { MLModel } from './mlModel.js';
 
 dotenv.config({ path: '../.env' });
+
+// ============== ML MODEL INITIALIZATION ==============
+const mlModel = new MLModel();
+console.log('🧠 ML Model: Ready for predictions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -137,27 +142,55 @@ mqttClient.on('message', (topic, message) => {
         const payloadString = message.toString();
         const data = JSON.parse(payloadString);
 
-        // --- Intelligence Layer ---
+        // --- Sensor Data Extraction ---
         const temp = data.temp || 0;
         const vib = data.vib || 0;
         const current = data.current || 0;
 
+        // --- ML Intelligence Layer ---
+        const mlResult = mlModel.predictHealth(temp, vib, current);
+
+        // Rule-based fallback calculation
         const tempPenalty = Math.max(0, (temp - 60) * 1.5);
         const vibPenalty = Math.max(0, (vib - 1.0) * 20);
         const currentPenalty = Math.max(0, (current - 10) * 5);
+        const ruleBasedHealth = Math.max(0, Math.min(100, 100 - (0.4 * tempPenalty + 0.35 * vibPenalty + 0.25 * currentPenalty)));
 
-        let calculatedHealth = 100 - (0.4 * tempPenalty + 0.35 * vibPenalty + 0.25 * currentPenalty);
+        // Use ML prediction if confidence is high, otherwise fallback to rule-based
+        let calculatedHealth;
+        let predictionSource;
+
+        if (mlResult.confidence > 0.7) {
+            calculatedHealth = mlResult.health;
+            predictionSource = 'ML';
+        } else {
+            calculatedHealth = ruleBasedHealth;
+            predictionSource = 'Rule-Based';
+        }
+
+        // Ensure health is in valid range
         calculatedHealth = Math.max(0, Math.min(100, calculatedHealth));
 
+        // --- Online Learning: Train ML model with rule-based target ---
+        mlModel.train(temp, vib, current, ruleBasedHealth / 100);
+
+        // Determine status
         let status = 'healthy';
         if (calculatedHealth < 60) status = 'critical';
         else if (calculatedHealth < 80) status = 'warning';
 
-        // Enrich Payload
+        // Enrich Payload with ML metadata
         const enrichedData = {
             ...data,
             health: calculatedHealth,
             status: status,
+            fault: mlResult.fault,
+            rul: mlResult.rul,
+            anomalyScore: mlResult.anomalyScore,
+            isAnomaly: mlResult.isAnomaly,
+            mlConfidence: mlResult.confidence,
+            predictionSource: predictionSource,
+            trainingCount: mlResult.trainingCount,
             processedAt: Date.now()
         };
 
@@ -171,14 +204,11 @@ mqttClient.on('message', (topic, message) => {
                 sendCriticalEmail(enrichedData);
                 lastAlertTimes[data.nodeId] = now;
             }
-        } else {
-            // Optional: Reset cooldown if healthy? 
-            // Better to keep cooldown to avoid flapping spam.
         }
 
         // Emit to Frontend
         io.emit('sensor_update', enrichedData);
-        console.log(`>> Emitted update for ${data.nodeId} (Health: ${calculatedHealth.toFixed(1)}%)`);
+        console.log(`🧠 ML Prediction [${data.nodeId}]: Health=${calculatedHealth.toFixed(1)}% (${predictionSource}), RUL=${mlResult.rul}h, Anomaly=${mlResult.anomalyScore.toFixed(2)}, Confidence=${mlResult.confidence.toFixed(2)}`);
 
     } catch (e) {
         console.error('Error processing MQTT message:', e);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, AreaChart, Area
@@ -8,16 +8,43 @@ import { BarChart2, Activity, AlertTriangle, ArrowRight } from 'lucide-react';
 const Analytics = ({ nodes }) => {
     const [timeRange, setTimeRange] = useState('daily');
 
-    // Mock Trend Data generated based on time range
-    const trendData = [
-        { time: '00:00', temp: 55, vib: 0.5, health: 98 },
-        { time: '04:00', temp: 58, vib: 0.6, health: 97 },
-        { time: '08:00', temp: 62, vib: 0.8, health: 95 },
-        { time: '12:00', temp: 65, vib: 1.2, health: 92 },
-        { time: '16:00', temp: 60, vib: 0.9, health: 94 },
-        { time: '20:00', temp: 57, vib: 0.6, health: 96 },
-        { time: '24:00', temp: 56, vib: 0.5, health: 97 },
-    ];
+    // Calculate real-time trend data from node history
+    const trendData = useMemo(() => {
+        if (!nodes || nodes.length === 0) return [];
+
+        const historyLength = nodes[0]?.history?.length || 0;
+        if (historyLength === 0) return [];
+
+        // Create an array of aggregated data points
+        const aggregatedHistory = [];
+
+        for (let i = 0; i < historyLength; i++) {
+            let totalTemp = 0;
+            let totalHealth = 0;
+            let validNodes = 0;
+
+            nodes.forEach(node => {
+                const historyPoint = node.history?.[i];
+                if (historyPoint) {
+                    totalTemp += typeof historyPoint.temp === 'number' ? historyPoint.temp : 0;
+                    totalHealth += typeof historyPoint.health === 'number' ? historyPoint.health : 0;
+                    validNodes++;
+                }
+            });
+
+            if (validNodes > 0) {
+                // Use the time from the first node as the reference time
+                const timeLabel = nodes[0].history[i].time;
+                aggregatedHistory.push({
+                    time: timeLabel,
+                    temp: Number((totalTemp / validNodes).toFixed(1)),
+                    health: Number((totalHealth / validNodes).toFixed(1)),
+                });
+            }
+        }
+
+        return aggregatedHistory;
+    }, [nodes]);
 
     const radarData = nodes.map(node => ({
         subject: node.name.split(' ')[0],
@@ -47,8 +74,8 @@ const Analytics = ({ nodes }) => {
                             key={range}
                             onClick={() => setTimeRange(range.toLowerCase())}
                             className={`px-5 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ${timeRange === range.toLowerCase()
-                                    ? 'bg-gray-800 text-white shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                                ? 'bg-gray-800 text-white shadow-sm'
+                                : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                                 }`}
                         >
                             {range}
@@ -212,7 +239,7 @@ const Analytics = ({ nodes }) => {
                                     <div className="w-full bg-gray-900 h-2 rounded-full overflow-hidden">
                                         <div
                                             className={`h-full transition-all duration-1000 ease-out ${isCritical ? 'bg-red-500' :
-                                                    rulPercentage < 50 ? 'bg-amber-500' : 'bg-blue-500'
+                                                rulPercentage < 50 ? 'bg-amber-500' : 'bg-blue-500'
                                                 }`}
                                             style={{ width: `${rulPercentage}%` }}
                                         ></div>

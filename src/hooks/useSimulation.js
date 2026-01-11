@@ -17,6 +17,7 @@ const generateInitialHistory = () => {
         temp: 0,
         vib: 0,
         current: 0,
+        health: 100,
     }));
 };
 
@@ -117,6 +118,7 @@ export const useSimulation = () => {
                     temp: data.temp,
                     vib: data.vib,
                     current: data.current,
+                    health: data.health,
                 }
             ];
 
