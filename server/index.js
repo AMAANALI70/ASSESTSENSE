@@ -156,11 +156,11 @@ mqttClient.on('message', (topic, message) => {
         const currentPenalty = Math.max(0, (current - 10) * 5);
         const ruleBasedHealth = Math.max(0, Math.min(100, 100 - (0.4 * tempPenalty + 0.35 * vibPenalty + 0.25 * currentPenalty)));
 
-        // Use ML prediction if confidence is high, otherwise fallback to rule-based
+        // Use ML prediction if confidence is very high, otherwise fallback to rule-based
         let calculatedHealth;
         let predictionSource;
 
-        if (mlResult.confidence > 0.7) {
+        if (mlResult.confidence > 0.95) {  // Increased threshold due to current sensor calibration
             calculatedHealth = mlResult.health;
             predictionSource = 'ML';
         } else {

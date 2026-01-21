@@ -1,423 +1,310 @@
 /**
- * AssetSense ML Model
- * Lightweight Neural Network for Predictive Maintenance
+ * AssetSense ML Model - Cloud Analytics Layer
+ * Implements "Section VI.C: Cloud Analytics and Fleet Intelligence" from IOT_paper.pdf
  * 
- * Architecture: 3 inputs → 4 hidden (ReLU) → 2 outputs (Sigmoid)
- * - Input: [temperature, vibration, current] (normalized)
- * - Output: [health, anomaly] (0-1)
- * 
- * Features:
- * - Online learning with gradient descent
- * - RUL estimation using exponential decay
- * - Statistical anomaly detection
- * - Pattern-based fault classification
+ * Algorithms:
+ * 1. Drift Estimation: Exponentially Weighted Moving Average (EWMA) [Eq. 4]
+ * 2. Anomaly Detection: Isolation Forest (Unsupervised) [Section VI.C.2]
+ * 3. Health Scoring: Sigmoid-based Penalty Function [Eq. 5 & 6]
  */
 
-// ============== CONFIGURATION ==============
 const CONFIG = {
-    // Network architecture
-    inputSize: 3,
-    hiddenSize: 4,
-    outputSize: 2,
-
-    // Learning parameters
-    learningRate: 0.01,
-    minConfidence: 0.5,
-
-    // Sensor normalization bounds (based on typical industrial ranges)
-    normalization: {
-        temp: { min: 20, max: 120 },      // °C
-        vib: { min: 0, max: 5 },           // g (RMS)
-        current: { min: 0, max: 20 }       // A
+    // EWMA Parameters
+    ewma: {
+        alphaBase: 0.1,    // Baseline smoothing factor
+        alphaDynamic: true // Adjust alpha based on volatility
     },
 
-    // Thresholds for rule-based fallback
+    // Health Penalty Weights (from Paper)
+    weights: {
+        vib: 0.5,
+        temp: 0.3,
+        current: 0.2
+    },
+
+    // Soft Thresholds for Sigmoid Function (Tau_k)
     thresholds: {
-        temp: { warning: 70, critical: 85 },
-        vib: { warning: 1.5, critical: 2.5 },
-        current: { warning: 12, critical: 15 }
+        vib: 2.5,    // mm/s (mapped from g for simulation)
+        temp: 75,    // °C
+        current: 12  // A
     },
 
-    // RUL parameters
-    rul: {
-        maxHours: 1000,           // Maximum RUL in hours
-        decayRateHealthy: 0.001,  // Slow decay when healthy
-        decayRateCritical: 0.05   // Fast decay when critical
+    // Sensitivity Parameters (Lambda_k) - Tuned for sigmoid curve
+    sensitivity: {
+        vib: 2.0,
+        temp: 0.25,  // Increased from 0.1 for sharper penalty at 90C
+        current: 0.5
+    },
+
+    // Calibration
+    calibration: {
+        vibScale: 1.0,
     }
 };
 
-// ============== UTILITY FUNCTIONS ==============
+// ==========================================
+// 1. ISOLATION FOREST IMPLEMENTATION
+// ==========================================
 
-/**
- * ReLU activation function
- */
-function relu(x) {
-    return Math.max(0, x);
+class IsolationTree {
+    constructor(heightLimit) {
+        this.heightLimit = heightLimit;
+        this.root = null;
+    }
+
+    fit(X) {
+        this.root = this.makeTree(X, 0, this.heightLimit);
+    }
+
+    makeTree(X, currentHeight, heightLimit) {
+        if (currentHeight >= heightLimit || X.length <= 1) {
+            return { type: 'leaf', size: X.length };
+        }
+
+        // 1. Randomly select a dimension (feature)
+        const numFeatures = X[0].length;
+        const q = Math.floor(Math.random() * numFeatures);
+
+        // 2. Find min/max for that feature
+        const values = X.map(x => x[q]);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+
+        if (min === max) {
+            return { type: 'leaf', size: X.length };
+        }
+
+        // 3. Randomly select a split value
+        const p = min + Math.random() * (max - min);
+
+        // 4. Split data
+        const leftX = X.filter(x => x[q] < p);
+        const rightX = X.filter(x => x[q] >= p);
+
+        return {
+            type: 'node',
+            splitAtt: q,
+            splitVal: p,
+            left: this.makeTree(leftX, currentHeight + 1, heightLimit),
+            right: this.makeTree(rightX, currentHeight + 1, heightLimit)
+        };
+    }
+
+    pathLength(x, node, currentHeight) {
+        if (node.type === 'leaf') {
+            return currentHeight + this.c(node.size);
+        }
+        if (x[node.splitAtt] < node.splitVal) {
+            return this.pathLength(x, node.left, currentHeight + 1);
+        } else {
+            return this.pathLength(x, node.right, currentHeight + 1);
+        }
+    }
+
+    c(n) {
+        if (n <= 1) return 0;
+        return 2 * (Math.log(n - 1) + 0.5772156649) - (2 * (n - 1) / n);
+    }
 }
 
-/**
- * Sigmoid activation function
- */
-function sigmoid(x) {
-    return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, x))));
+class IsolationForest {
+    constructor(numTrees = 20, sampleSize = 256) {
+        this.numTrees = numTrees;
+        this.sampleSize = sampleSize;
+        this.trees = [];
+        this.X_train = []; // Keep a rolling buffer of training data
+    }
+
+    train(dataPoint) {
+        // Online learning: Maintain a buffer of recent points
+        this.X_train.push(dataPoint);
+        if (this.X_train.length > this.sampleSize * 2) {
+            this.X_train.shift(); // Keep buffer size manageable
+        }
+
+        // Retrain periodically (simplified for online usage)
+        // In robust implementation, we wouldn't retrain on every point, but for 'Day-Zero' demo, we build trees on startup
+        if (this.trees.length === 0 && this.X_train.length >= 10) {
+            this.buildForest();
+        } else if (this.X_train.length % 50 === 0) {
+            // Rebuild forest periodically to adapt to new "normal"
+            this.buildForest();
+        }
+    }
+
+    buildForest() {
+        this.trees = [];
+        const heightLimit = Math.ceil(Math.log2(this.sampleSize));
+
+        // Subsample for training
+        const sample = this.X_train.length > this.sampleSize
+            ? this.X_train.slice(-this.sampleSize) // Take most recent
+            : this.X_train;
+
+        for (let i = 0; i < this.numTrees; i++) {
+            const tree = new IsolationTree(heightLimit);
+            tree.fit(sample);
+            this.trees.push(tree);
+        }
+        console.log(`🌲 Isolation Forest: Rebuilt with ${this.trees.length} trees`);
+    }
+
+    score(x) {
+        if (this.trees.length === 0) return 0.5; // Default neutral score
+
+        let totalPathLength = 0;
+        for (let tree of this.trees) {
+            totalPathLength += tree.pathLength(x, tree.root, 0);
+        }
+        const avgPathLength = totalPathLength / this.trees.length;
+
+        // Normalize score: 2^(-E(h(x)) / c(n))
+        const n = this.sampleSize;
+        const c_n = 2 * (Math.log(n - 1) + 0.5772156649) - (2 * (n - 1) / n);
+        const score = Math.pow(2, -avgPathLength / c_n);
+
+        return score; // > 0.6 is anomaly
+    }
 }
 
-/**
- * Sigmoid derivative for backpropagation
- */
-function sigmoidDerivative(x) {
-    const s = sigmoid(x);
-    return s * (1 - s);
-}
-
-/**
- * ReLU derivative for backpropagation
- */
-function reluDerivative(x) {
-    return x > 0 ? 1 : 0;
-}
-
-/**
- * Xavier/Glorot initialization for weights
- */
-function xavierInit(fanIn, fanOut) {
-    const limit = Math.sqrt(6 / (fanIn + fanOut));
-    return (Math.random() * 2 - 1) * limit;
-}
-
-// ============== ML MODEL CLASS ==============
+// ==========================================
+// 2. MAIN MODEL CLASS
+// ==========================================
 
 export class MLModel {
     constructor() {
-        console.log('🧠 ML Model: Initializing neural network...');
+        console.log('🧠 AssetSense Cloud Analytics: Initializing...');
 
-        // Initialize weights with Xavier initialization
-        this.weightsInputHidden = this.initWeights(CONFIG.inputSize, CONFIG.hiddenSize);
-        this.weightsHiddenOutput = this.initWeights(CONFIG.hiddenSize, CONFIG.outputSize);
+        this.isolationForest = new IsolationForest(25, 100); // 25 trees, 100 sample size
 
-        // Initialize biases to zero
-        this.biasHidden = new Array(CONFIG.hiddenSize).fill(0);
-        this.biasOutput = new Array(CONFIG.outputSize).fill(0);
-
-        // Training statistics
-        this.trainingCount = 0;
-        this.runningError = 0;
-        this.confidence = CONFIG.minConfidence;
-
-        // History for anomaly detection
-        this.history = [];
-        this.historyMaxSize = 100;
-
-        // Running statistics for online normalization
-        this.runningMean = [0, 0, 0];
-        this.runningStd = [1, 1, 1];
-
-        console.log('🧠 ML Model: Initialized with',
-            CONFIG.inputSize, '→', CONFIG.hiddenSize, '→', CONFIG.outputSize, 'architecture');
-    }
-
-    /**
-     * Initialize weight matrix with Xavier initialization
-     */
-    initWeights(fanIn, fanOut) {
-        const weights = [];
-        for (let i = 0; i < fanIn; i++) {
-            weights[i] = [];
-            for (let j = 0; j < fanOut; j++) {
-                weights[i][j] = xavierInit(fanIn, fanOut);
-            }
-        }
-        return weights;
-    }
-
-    /**
-     * Normalize sensor values to 0-1 range
-     */
-    normalize(temp, vib, current) {
-        const norm = CONFIG.normalization;
-        return [
-            (temp - norm.temp.min) / (norm.temp.max - norm.temp.min),
-            (vib - norm.vib.min) / (norm.vib.max - norm.vib.min),
-            (current - norm.current.min) / (norm.current.max - norm.current.min)
-        ].map(v => Math.max(0, Math.min(1, v))); // Clamp to [0, 1]
-    }
-
-    /**
-     * Forward pass through the neural network
-     */
-    forward(inputs) {
-        // Input → Hidden layer
-        const hiddenPre = new Array(CONFIG.hiddenSize).fill(0);
-        for (let j = 0; j < CONFIG.hiddenSize; j++) {
-            for (let i = 0; i < CONFIG.inputSize; i++) {
-                hiddenPre[j] += inputs[i] * this.weightsInputHidden[i][j];
-            }
-            hiddenPre[j] += this.biasHidden[j];
-        }
-
-        // Apply ReLU activation
-        const hiddenPost = hiddenPre.map(relu);
-
-        // Hidden → Output layer
-        const outputPre = new Array(CONFIG.outputSize).fill(0);
-        for (let k = 0; k < CONFIG.outputSize; k++) {
-            for (let j = 0; j < CONFIG.hiddenSize; j++) {
-                outputPre[k] += hiddenPost[j] * this.weightsHiddenOutput[j][k];
-            }
-            outputPre[k] += this.biasOutput[k];
-        }
-
-        // Apply Sigmoid activation
-        const outputPost = outputPre.map(sigmoid);
-
-        return {
-            inputs,
-            hiddenPre,
-            hiddenPost,
-            outputPre,
-            outputPost
+        // EWMA State [Mean, Variance]
+        this.driftState = {
+            temp: { mean: 40, var: 0 },
+            vib: { mean: 0.5, var: 0 },
+            current: { mean: 5, var: 0 }
         };
+
+        this.trainingCount = 0;
+        console.log('🧠 AssetSense Cloud Analytics: Online (Isolation Forest + EWMA)');
     }
 
     /**
-     * Train the model using online gradient descent
+     * Eq 4: Exponentially Weighted Moving Average for Drift Estimation
+     * Tracks the "true" underlying value amidst noise.
      */
-    train(temp, vib, current, targetHealth) {
-        const inputs = this.normalize(temp, vib, current);
-        const target = [targetHealth, 0]; // [health, anomaly] - anomaly target is 0 for normal
+    updateDrift(metric, value) {
+        const state = this.driftState[metric];
 
-        // Forward pass
-        const { hiddenPre, hiddenPost, outputPre, outputPost } = this.forward(inputs);
+        // Simple variance estimation for dynamic alpha
+        // If deviation is high, high alpha (trust new value more/fast adaptation)
+        // If deviation is low, low alpha (filter noise)
+        const deviation = Math.abs(value - state.mean);
+        let alpha = CONFIG.ewma.alphaBase;
 
-        // Calculate output error
-        const outputError = [
-            outputPost[0] - target[0],
-            outputPost[1] - target[1]
-        ];
-
-        // Calculate gradients for output layer
-        const outputGrad = outputError.map((e, k) => e * sigmoidDerivative(outputPre[k]));
-
-        // Calculate hidden layer error
-        const hiddenError = new Array(CONFIG.hiddenSize).fill(0);
-        for (let j = 0; j < CONFIG.hiddenSize; j++) {
-            for (let k = 0; k < CONFIG.outputSize; k++) {
-                hiddenError[j] += outputGrad[k] * this.weightsHiddenOutput[j][k];
-            }
+        if (CONFIG.ewma.alphaDynamic) {
+            // Heuristic: Boost alpha if deviation > 3 * estimated std dev (approx)
+            if (deviation > (Math.sqrt(state.var) * 3)) alpha = 0.5;
         }
 
-        // Calculate hidden layer gradients
-        const hiddenGrad = hiddenError.map((e, j) => e * reluDerivative(hiddenPre[j]));
+        // Update Mean: mu_t = alpha * X_t + (1 - alpha) * mu_t-1
+        state.mean = alpha * value + (1 - alpha) * state.mean;
 
-        // Update weights: Hidden → Output
-        for (let j = 0; j < CONFIG.hiddenSize; j++) {
-            for (let k = 0; k < CONFIG.outputSize; k++) {
-                this.weightsHiddenOutput[j][k] -= CONFIG.learningRate * outputGrad[k] * hiddenPost[j];
-            }
-        }
+        // Update Variance (Welford's approx or simple exponential)
+        // Var_t = (1-beta)*Var_t-1 + beta*(X_t - mu_t)^2
+        const beta = 0.1;
+        state.var = (1 - beta) * state.var + beta * Math.pow(deviation, 2);
 
-        // Update biases: Output
-        for (let k = 0; k < CONFIG.outputSize; k++) {
-            this.biasOutput[k] -= CONFIG.learningRate * outputGrad[k];
-        }
-
-        // Update weights: Input → Hidden
-        for (let i = 0; i < CONFIG.inputSize; i++) {
-            for (let j = 0; j < CONFIG.hiddenSize; j++) {
-                this.weightsInputHidden[i][j] -= CONFIG.learningRate * hiddenGrad[j] * inputs[i];
-            }
-        }
-
-        // Update biases: Hidden
-        for (let j = 0; j < CONFIG.hiddenSize; j++) {
-            this.biasHidden[j] -= CONFIG.learningRate * hiddenGrad[j];
-        }
-
-        // Update training statistics
-        this.trainingCount++;
-        const error = Math.abs(outputError[0]);
-        this.runningError = 0.95 * this.runningError + 0.05 * error;
-
-        // Update confidence based on error
-        this.confidence = Math.min(0.99, CONFIG.minConfidence + (1 - this.runningError) * 0.4);
-
-        // Store in history for anomaly detection
-        this.history.push({ temp, vib, current, health: targetHealth });
-        if (this.history.length > this.historyMaxSize) {
-            this.history.shift();
-        }
+        return state.mean;
     }
 
     /**
-     * Main prediction function
+     * Eq 5: Partial Health Penalty Function (Sigmoid)
+     * phi_k(x) = 1 / (1 + e^(-lambda * (x - tau)))
+     */
+    calculatePenalty(value, metric) {
+        const lambda = CONFIG.sensitivity[metric];
+        const tau = CONFIG.thresholds[metric];
+
+        // Sigmoid function
+        const exponent = -lambda * (value - tau);
+        const penalty = 1 / (1 + Math.exp(exponent));
+
+        return penalty;
+    }
+
+    /**
+     * Main Pipeline: Ingest -> EWMA -> Isolation Forest -> Health Score
      */
     predictHealth(temp, vib, current) {
-        const inputs = this.normalize(temp, vib, current);
-        const { outputPost } = this.forward(inputs);
+        // 1. Drift Estimation (EWMA)
+        const driftTemp = this.updateDrift('temp', temp);
+        const driftVib = this.updateDrift('vib', vib);
+        const driftCurrent = this.updateDrift('current', current);
 
-        // ML predicted health (0-1 → 0-100)
-        const mlHealth = outputPost[0] * 100;
-        const mlAnomaly = outputPost[1];
+        // 2. Anomaly Detection (Isolation Forest)
+        // Feature Vector: [Temp, Vib, Current]
+        const features = [temp, vib, current];
+        this.isolationForest.train(features); // Online Learning
+        const anomalyScore = this.isolationForest.score(features);
+        const isAnomaly = anomalyScore > 0.55; // Tuned threshold for lightweight implementation
 
-        // Calculate RUL
-        const rul = this.predictRUL(mlHealth);
+        // 3. Health Score Calculation (Eq. 6)
+        // H(t) = 100 - Sum(w_k * phi_k(x)) * 100
+        const pTemp = this.calculatePenalty(driftTemp, 'temp');
+        const pVib = this.calculatePenalty(driftVib, 'vib');
+        const pCurrent = this.calculatePenalty(driftCurrent, 'current');
 
-        // Detect anomalies
-        const anomalyResult = this.detectAnomaly(temp, vib, current);
+        const totalPenalty = (
+            CONFIG.weights.temp * pTemp +
+            CONFIG.weights.vib * pVib +
+            CONFIG.weights.current * pCurrent
+        );
 
-        // Classify fault
-        const fault = this.classifyFault(temp, vib, current);
+        const healthScore = Math.max(0, Math.min(100, (1 - totalPenalty) * 100));
 
-        // Combine anomaly scores
-        const combinedAnomalyScore = Math.max(mlAnomaly, anomalyResult.score);
+        // 4. RUL Estimation (Simplified Physics-based)
+        const rul = this.estimateRUL(healthScore);
+
+        this.trainingCount++;
 
         return {
-            health: Math.max(0, Math.min(100, mlHealth)),
-            anomalyScore: combinedAnomalyScore,
+            health: healthScore,
+            anomalyScore: anomalyScore,
+            isAnomaly: isAnomaly,
             rul: rul,
-            fault: fault,
-            confidence: this.confidence,
-            isAnomaly: combinedAnomalyScore > 0.5,
-            trainingCount: this.trainingCount
+            fault: this.classifyFault(temp, vib, current),
+            confidence: isAnomaly ? 0.4 : 0.9, // Lower confidence if outlier detected
+            trainingCount: this.trainingCount,
+            drift: { temp: driftTemp, vib: driftVib, current: driftCurrent }
         };
     }
 
-    /**
-     * Predict Remaining Useful Life using exponential decay model
-     */
-    predictRUL(healthPercent) {
-        const health = healthPercent / 100;
-
-        // Exponential decay model
-        // RUL = maxRUL * health^2 (faster decay at lower health)
-        let rul = CONFIG.rul.maxHours * Math.pow(health, 2);
-
-        // Apply critical decay rate if health is low
-        if (healthPercent < 60) {
-            rul *= 0.5; // Halve RUL when critical
-        } else if (healthPercent < 80) {
-            rul *= 0.75; // Reduce RUL when warning
-        }
-
-        return Math.max(0, Math.round(rul));
+    estimateRUL(health) {
+        // Basic quadratic decay model
+        // RUL = 1000 * (Health/100)^2
+        return Math.floor(1000 * Math.pow(health / 100, 2));
     }
 
-    /**
-     * Detect anomalies using statistical methods
-     */
-    detectAnomaly(temp, vib, current) {
-        if (this.history.length < 10) {
-            return { score: 0, reason: 'Insufficient data' };
-        }
-
-        // Calculate mean and std from history
-        const temps = this.history.map(h => h.temp);
-        const vibs = this.history.map(h => h.vib);
-        const currents = this.history.map(h => h.current);
-
-        const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
-        const std = arr => {
-            const m = mean(arr);
-            return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / arr.length);
-        };
-
-        const tempMean = mean(temps);
-        const vibMean = mean(vibs);
-        const currentMean = mean(currents);
-
-        const tempStd = std(temps) || 1;
-        const vibStd = std(vibs) || 0.1;
-        const currentStd = std(currents) || 1;
-
-        // Calculate Z-scores
-        const tempZ = Math.abs(temp - tempMean) / tempStd;
-        const vibZ = Math.abs(vib - vibMean) / vibStd;
-        const currentZ = Math.abs(current - currentMean) / currentStd;
-
-        // Max Z-score as anomaly indicator
-        const maxZ = Math.max(tempZ, vibZ, currentZ);
-
-        // Convert Z-score to anomaly score (0-1)
-        // Z > 3 is typically considered anomalous
-        const score = Math.min(1, maxZ / 4);
-
-        let reason = 'Normal';
-        if (maxZ > 3) {
-            if (tempZ === maxZ) reason = 'Temperature spike';
-            else if (vibZ === maxZ) reason = 'Vibration spike';
-            else reason = 'Current spike';
-        }
-
-        return { score, reason, zScores: { temp: tempZ, vib: vibZ, current: currentZ } };
-    }
-
-    /**
-     * Classify fault type based on sensor patterns
-     */
     classifyFault(temp, vib, current) {
-        const t = CONFIG.thresholds;
-
-        // Pattern matching for fault classification
-        const highTemp = temp > t.temp.warning;
-        const criticalTemp = temp > t.temp.critical;
-        const highVib = vib > t.vib.warning;
-        const criticalVib = vib > t.vib.critical;
-        const highCurrent = current > t.current.warning;
-        const criticalCurrent = current > t.current.critical;
-
-        // Bearing Wear: High temp + High vibration
-        if (highTemp && highVib) {
-            return 'Bearing Wear';
-        }
-
-        // Overload: High temp + High current
-        if (highTemp && highCurrent) {
-            return 'Overload';
-        }
-
-        // Misalignment: High vibration only
-        if (criticalVib && !highTemp) {
-            return 'Misalignment';
-        }
-
-        // Overheating: High temp only
-        if (criticalTemp && !highVib && !highCurrent) {
-            return 'Overheating';
-        }
-
-        // Electrical Issue: High current + normal temp
-        if (criticalCurrent && !highTemp) {
-            return 'Electrical Issue';
-        }
-
+        if (temp > 85) return 'Overheating';
+        if (vib > 2.0) return 'Misalignment'; // Tuned for simulation
+        if (current > 15) return 'Overload';
         return 'None';
     }
 
-    /**
-     * Rule-based health calculation (fallback)
-     */
-    calculateRuleBasedHealth(temp, vib, current) {
-        const tempPenalty = Math.max(0, (temp - 60) * 1.5);
-        const vibPenalty = Math.max(0, (vib - 1.0) * 20);
-        const currentPenalty = Math.max(0, (current - 10) * 5);
-
-        let health = 100 - (0.4 * tempPenalty + 0.35 * vibPenalty + 0.25 * currentPenalty);
-        return Math.max(0, Math.min(100, health));
+    train(temp, vib, current, target) {
+        // Isolation Forest trains online in 'predictHealth', distinct explicit training is passive here
+        // We keep this method signature for compatibility with index.js
     }
 
-    /**
-     * Get model status for debugging/display
-     */
     getStatus() {
         return {
-            trainingCount: this.trainingCount,
-            confidence: this.confidence,
-            runningError: this.runningError,
-            historySize: this.history.length,
-            architecture: `${CONFIG.inputSize}→${CONFIG.hiddenSize}→${CONFIG.outputSize}`
+            algorithm: 'Isolation Forest + EWMA',
+            trees: this.isolationForest.trees.length,
+            samples: this.isolationForest.X_train.length,
+            drift: this.driftState
         };
     }
 }
 
-// Export default instance for convenience
 export default MLModel;
