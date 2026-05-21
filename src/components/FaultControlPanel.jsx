@@ -6,7 +6,7 @@ import {
 
 const FaultControlPanel = ({ nodes, injectFault, repairNode }) => {
     const [selectedNode, setSelectedNode] = useState(nodes[0]?.id || 1);
-    const [selectedFault, setSelectedFault] = useState('Overheating');
+    const [selectedFault, setSelectedFault] = useState('Vibration Spike');
 
     const handleInject = () => {
         injectFault(Number(selectedNode), selectedFault);
@@ -20,10 +20,11 @@ const FaultControlPanel = ({ nodes, injectFault, repairNode }) => {
     const targetNode = nodes.find(n => n.id === Number(selectedNode));
 
     const faultTypes = [
-        { id: 'Overheating', icon: <Thermometer size={24} />, color: '#ef4444', label: 'Overheating' },
-        { id: 'Misalignment', icon: <Settings size={24} />, color: '#f97316', label: 'Misalignment' },
-        { id: 'Bearing Wear', icon: <Disc size={24} />, color: '#eab308', label: 'Bearing Wear' },
-        { id: 'Overload', icon: <Zap size={24} />, color: '#a855f7', label: 'Overload' },
+        { id: 'Vibration Spike', icon: <Activity size={24} />, color: '#3b82f6', label: 'Vibration Spike', desc: '>1.0g RMS' },
+        { id: 'Temperature Surge', icon: <Thermometer size={24} />, color: '#ef4444', label: 'Temp Surge', desc: '>85°C' },
+        { id: 'Overload', icon: <Zap size={24} />, color: '#a855f7', label: 'Overload', desc: '>120% current' },
+        { id: 'Bearing Wear', icon: <Disc size={24} />, color: '#eab308', label: 'Bearing Wear', desc: 'Progressive' },
+        { id: 'Misalignment', icon: <Settings size={24} />, color: '#f97316', label: 'Misalignment', desc: 'Shaft vibration' },
     ];
 
     const getMachineIcon = (type) => {
@@ -120,7 +121,7 @@ const FaultControlPanel = ({ nodes, injectFault, repairNode }) => {
                     <h3 style={{ fontSize: '0.875rem', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <AlertTriangle size={16} /> Fault Type
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.75rem' }}>
                         {faultTypes.map(fault => {
                             const isSelected = selectedFault === fault.id;
                             return (
@@ -132,7 +133,7 @@ const FaultControlPanel = ({ nodes, injectFault, repairNode }) => {
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        padding: '1.5rem',
+                                        padding: '1rem 0.5rem',
                                         background: isSelected ? `rgba(${parseInt(fault.color.slice(1, 3), 16)}, ${parseInt(fault.color.slice(3, 5), 16)}, ${parseInt(fault.color.slice(5, 7), 16)}, 0.1)` : '#1e293b',
                                         border: isSelected ? `1px solid ${fault.color}` : '1px solid #334155',
                                         borderRadius: '8px',
@@ -143,8 +144,9 @@ const FaultControlPanel = ({ nodes, injectFault, repairNode }) => {
                                         boxShadow: isSelected ? `0 0 15px ${fault.color}40` : 'none'
                                     }}
                                 >
-                                    <div style={{ marginBottom: '0.5rem' }}>{fault.icon}</div>
-                                    <span style={{ fontWeight: '600', fontSize: '0.875rem' }}>{fault.label}</span>
+                                    <div style={{ marginBottom: '0.25rem' }}>{fault.icon}</div>
+                                    <span style={{ fontWeight: '600', fontSize: '0.75rem' }}>{fault.label}</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.25rem' }}>{fault.desc}</span>
                                 </button>
                             );
                         })}

@@ -13,7 +13,8 @@ import SystemResponseBanner from './components/SystemResponseBanner';
 import Analytics from './components/Analytics';
 import Team from './components/Team';
 import SettingsPage from './components/Settings';
-import { LayoutDashboard, Settings, Users, BarChart2 } from 'lucide-react';
+import SystemArchitecture from './components/SystemArchitecture';
+import { LayoutDashboard, Settings, Users, BarChart2, Cpu } from 'lucide-react';
 
 function App() {
   const { nodes, alerts, systemStatus, injectFault, repairNode } = useSimulation();
@@ -24,6 +25,8 @@ function App() {
     switch (currentView) {
       case 'analytics':
         return <Analytics nodes={nodes} />;
+      case 'architecture':
+        return <SystemArchitecture />;
       case 'team':
         return <Team />;
       case 'settings':
@@ -109,6 +112,12 @@ function App() {
             onClick={() => setCurrentView('analytics')}
           />
           <NavItem
+            icon={<Cpu size={20} />}
+            label="Architecture"
+            active={currentView === 'architecture'}
+            onClick={() => setCurrentView('architecture')}
+          />
+          <NavItem
             icon={<Users size={20} />}
             label="Team"
             active={currentView === 'team'}
@@ -123,7 +132,7 @@ function App() {
         </nav>
 
         <div style={{ marginTop: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          v1.0.0-sim
+          v1.1.0 - ML Enhanced
         </div>
       </aside>
 

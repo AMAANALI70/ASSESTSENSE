@@ -2,7 +2,7 @@ import React from 'react';
 import HealthGauge from './HealthGauge';
 import RealTimeChart from './RealTimeChart';
 import MachineAnimation from './MachineAnimation';
-import { Activity, Thermometer, Zap, AlertTriangle, Power } from 'lucide-react';
+import { Activity, Thermometer, Zap, AlertTriangle, Power, Brain } from 'lucide-react';
 
 const NodeCard = ({ node, onClick }) => {
     const isCritical = node.status === 'critical';
@@ -72,13 +72,19 @@ const NodeCard = ({ node, onClick }) => {
                         <span className="flex-center" style={{ gap: '0.5rem', color: 'var(--text-secondary)' }}>
                             <Thermometer size={16} className={node.temp > 80 ? 'text-red-400 animate-pulse' : ''} /> Temp
                         </span>
-                        <span style={{ fontWeight: 'bold' }}>{node.temp.toFixed(1)}°C</span>
+                        <span style={{ fontWeight: 'bold', color: node.temp > 85 ? '#ef4444' : node.temp > 75 ? '#f59e0b' : 'inherit' }}>
+                            {node.temp.toFixed(1)}°C
+                            {node.temp > 75 && <span style={{ fontSize: '0.6rem', marginLeft: '4px', color: node.temp > 85 ? '#ef4444' : '#f59e0b' }}>!</span>}
+                        </span>
                     </div>
                     <div className="flex-center" style={{ justifyContent: 'space-between' }}>
                         <span className="flex-center" style={{ gap: '0.5rem', color: 'var(--text-secondary)' }}>
-                            <Activity size={16} className={node.vib > 2.0 ? 'text-orange-400 animate-pulse' : ''} /> Vib
+                            <Activity size={16} className={node.vib > 0.5 ? 'text-orange-400 animate-pulse' : ''} /> Vib
                         </span>
-                        <span style={{ fontWeight: 'bold' }}>{node.vib.toFixed(2)}g</span>
+                        <span style={{ fontWeight: 'bold', color: node.vib > 1.0 ? '#ef4444' : node.vib > 0.5 ? '#f59e0b' : 'inherit' }}>
+                            {node.vib.toFixed(2)}g
+                            {node.vib > 0.5 && <span style={{ fontSize: '0.6rem', marginLeft: '4px', color: node.vib > 1.0 ? '#ef4444' : '#f59e0b' }}>!</span>}
+                        </span>
                     </div>
                     <div className="flex-center" style={{ justifyContent: 'space-between' }}>
                         <span className="flex-center" style={{ gap: '0.5rem', color: 'var(--text-secondary)' }}>

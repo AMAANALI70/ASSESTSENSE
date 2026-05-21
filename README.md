@@ -1,351 +1,432 @@
 # 🏭 AssetSense – Industrial Predictive Maintenance Platform
 
-AssetSense is a production-ready Industrial IoT Predictive Maintenance platform that demonstrates how modern Industry 4.0 systems leverage **Machine Learning**, **real-time data processing**, and **edge-to-cloud intelligence** to monitor machine health, detect faults early, and prevent unplanned downtime.
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](#)
+[![Version](https://img.shields.io/badge/version-1.1.0--ML--Enhanced-orange.svg)](#)
+[![Node](https://img.shields.io/badge/node-%3E%3D%2018.0.0-green.svg)](#)
+[![React](https://img.shields.io/badge/react-19.2.0-blue.svg)](#)
+[![MQTT](https://img.shields.io/badge/protocol-MQTT%20v3.1.1-lightgrey.svg)](#)
 
-The project seamlessly integrates **lightweight neural networks**, **MQTT/WebSocket protocols**, and a **professional industrial dashboard** to deliver real-world predictive maintenance workflows used in manufacturing plants, energy systems, and process industries.
+AssetSense is a production-ready **Industrial IoT (IIoT) Predictive Maintenance (PdM)** platform designed to mimic supervisor control systems (SCADA/DCS) for process plants, manufacturing fleets, and rotating machinery. The system integrates real-time sensor streams, edge-to-cloud analytics with machine learning, and automated failover mechanics to maximize plant reliability and eliminate unplanned downtime.
 
-AssetSense supports both **simulation mode** (for development and demonstration) and **hardware integration** (ESP32-based sensor deployments with MQTT streaming).
+---
 
-## 🎯 Key Innovation: Embedded ML for Predictive Maintenance
+### ⚠️ The Problem It Solves
+In modern industrial settings, **unplanned equipment downtime** is the single largest driver of lost revenue, costing companies millions in repairs and lost productivity.
+* **Reactive Maintenance** (fixing machines *after* failure) leads to catastrophic damage, production logjams, and operator safety hazards.
+* **Preventative Maintenance** (servicing machines on a *fixed schedule*) is highly inefficient, frequently replacing healthy components and wasting resources.
 
-AssetSense implements a **pure JavaScript neural network** (3→4→2 architecture) that runs directly in the Node.js backend, featuring:
-- **Online Learning**: Continuously adapts to sensor patterns without retraining offline
-- **Health Scoring**: ML-based predictions with rule-based fallback when confidence is low
-- **Anomaly Detection**: Statistical Z-score analysis combined with ML anomaly scoring
-- **RUL Estimation**: Exponential decay model for Remaining Useful Life prediction
-- **Fault Classification**: Multi-parametric pattern matching for bearing wear, overload, misalignment, and overheating
+**AssetSense** bridges this gap using condition-based monitoring. By tracking multi-parametric signals (temperature, vibration, and current) in real-time, the system:
+1. Detects subtle machine degradation weeks before physical failure occurs.
+2. Identifies exact fault signatures (e.g., Bearing Wear, Overload, Misalignment).
+3. Automatically triggers safety overrides ("Auto-Protect") to switch operations to a redundant backup node.
+4. Alerts plant operators via instant email escalations.
 
-🎯 Project Motivation
+---
 
-In real industrial environments:
+## 📋 Table of Contents
+1. [Features](#-features)
+2. [Demo & Screenshots](#-demo--screenshots)
+3. [Tech Stack](#-tech-stack)
+4. [Project Structure](#-project-structure)
+5. [Installation & Setup](#-installation--setup)
+6. [Usage](#-usage)
+7. [API Documentation](#-api-documentation)
+8. [Testing](#-testing)
+9. [Deployment](#-deployment)
+10. [Contributing](#-contributing)
+11. [Roadmap / Future Improvements](#-roadmap--future-improvements)
+12. [License](#-license)
+13. [Contact / Author](#-contact--author)
 
-Unexpected machine failures cause massive production losses
-
-Reactive maintenance is unsafe and expensive
-
-Scheduled maintenance often replaces healthy components unnecessarily
-
-Predictive Maintenance (PdM) solves this by:
-
-Continuously monitoring machine condition
-
-Detecting early degradation patterns
-
-Acting before catastrophic failure occurs
-
-🚀 AssetSense was built to:
-
-Demonstrate predictive maintenance concepts clearly
-
-Showcase edge-cloud industrial architecture
-
-Simulate realistic machine degradation and faults
-
-Provide a decision-support dashboard, not just charts
-
-Serve as a bridge between academic IoT concepts and real industry systems
-
-🧠 What AssetSense Does
-
-AssetSense continuously monitors three critical machine parameters:
-
-Temperature
-
-Vibration
-
-Current
-
-Using these signals, it:
-
-Computes a Health Index (0–100%)
-
-Detects fault patterns such as:
-
-Overheating
-
-Bearing Wear
-
-Misalignment
-
-Overload
-
-Estimates Remaining Useful Life (RUL)
-
-Automatically triggers Auto-Protect by switching to a Spare Node when a machine becomes critical
-
-Escalates alerts via email notifications
-
-All logic mirrors real industrial predictive maintenance systems, even though sensor data is currently simulated.
-
-## 🏗️ System Architecture
-
-AssetSense follows a **Hybrid Edge–Cloud Industrial IoT Architecture** with ML-enabled intelligence:
-
-### 🔹 Hardware Layer (ESP32)
-- **ESP32 microcontroller** per machine node
-- **Sensor suite**: Temperature (DS18B20), Vibration (MPU6050), Current (ACS712)
-- **Control interface**: Relay modules for machine actuation
-- **Communication**: MQTT publish to cloud broker (HiveMQ)
-
-### 🔹 Communication Layer
-- **MQTT Broker**: HiveMQ Cloud (broker.hivemq.com)
-- **Protocol**: MQTT over TCP/IP for sensor data transmission
-- **WebSocket**: Socket.IO for real-time dashboard updates
-- **Data Flow**: ESP32 → MQTT Broker → Node.js Backend → WebSocket → React Dashboard
-
-### 🔹 Intelligence Layer (Node.js Backend)
-- **ML Neural Network**: 3-input → 4-hidden → 2-output architecture
-- **Online Learning**: Continuous model training with gradient descent
-- **Health Prediction**: ML inference with rule-based fallback
-- **Anomaly Detection**: Statistical Z-score analysis
-- **Fault Classification**: Pattern-based diagnosis (bearing wear, overload, misalignment, overheating)
-- **RUL Estimation**: Exponential decay model for predictive scheduling
-
-### 🔹 Alert & Action Layer
-- **Auto-Protect Logic**: Automatic spare node activation when health < 60%
-- **Email Alerts**: SMTP notifications via Nodemailer (5-minute cooldown)
-- **Event Throttling**: Prevents alert spam during transient faults
-
-### 🔹 Visualization Layer (React Dashboard)
-- **Real-time monitoring**: Live sensor streams via WebSocket
-- **ML insights**: Health scores, RUL, anomaly scores, confidence levels
-- **Fault simulation**: Manual injection for testing and demonstration
-- **Analytics**: Historical trends, node comparison, and operator activity
-
-🧩 Hardware Components (Real Deployment Ready)
-
-Although AssetSense currently simulates sensor data, it is fully compatible with real hardware.
-
-🔧 Per Machine Node
-
-ESP32 Dev Board (ESP32-WROOM / DevKitC)
-
-Temperature Sensor (DS18B20 / PT100)
-
-Vibration Sensor (MPU6050 / ADXL345)
-
-Current Sensor (ACS712 / SCT-013)
-
-Relay / Contactor Module
-
-Power Supply (5V / Industrial DC)
-
-🖥️ Edge System
-
-Industrial PC / Server / Laptop
-
-MQTT / HTTP / WebSocket support
-
-Local network (Ethernet / Wi-Fi)
-
-☁️ Backend
-
-Node.js + Express
-
-SMTP Email Service (Nodemailer)
+---
 
 ## 🚀 Features
 
-### 🧠 **Machine Learning Intelligence**
-- **Neural Network**: Lightweight 3→4→2 architecture (pure JavaScript)
-- **Online Learning**: Model trains continuously on incoming sensor data
-- **Adaptive Health Scoring**: ML predictions with >70% confidence, otherwise rule-based fallback
-- **Anomaly Detection**: Z-score statistical analysis + ML-based anomaly scoring
-- **RUL Prediction**: Exponential decay model estimating hours until failure
-- **Fault Classification**: Automatic diagnosis (Bearing Wear / Overload / Misalignment / Overheating)
-- **Prediction Metadata**: Displays ML confidence, training count, and prediction source
+### 🧠 Machine Learning & Analytics Intelligence
+* **Online Neural Network**: Features a pure-JavaScript feedforward neural network (using `Brain.js` with a 3-input → [64, 32] hidden → 2-output architecture) that trains dynamically in real-time on the telemetry stream.
+* **Unsupervised Anomaly Detection**: Employs a custom, lightweight **Isolation Forest** algorithm to calculate day-zero anomaly scores based on multi-dimensional sensor clustering.
+* **Stochastic Drift Estimation**: Uses an **Exponentially Weighted Moving Average (EWMA)** filter to identify trends and sensor drift amidst ambient industrial noise.
+* **Predictive Health Scoring**: Computes a composite Health Index (0–100%) utilizing a multi-parametric sigmoid-based penalty function derived from physical thresholds.
+* **RUL Trend Regression**: Calculates the **Remaining Useful Life (RUL)** in hours using a linear regression trend line of historical health metrics, allowing operators to plan maintenance cycles precisely.
+* **Automatic Fault Classification**: Automatically identifies and diagnoses specific operational abnormalities:
+  * **Bearing Wear**: Friction-induced heat combined with vibration spikes.
+  * **Motor Overload**: Accelerated current draw paired with winding temperature rises.
+  * **Shaft Misalignment**: Isolated vibration peaks in rotating parts.
+  * **Overheating**: Thermal spikes caused by cooling or environment failures.
 
-### 📊 **Real-Time Monitoring**
-- **Live Sensor Streams**: Temperature (°C), Vibration (g), Current (A) via MQTT/WebSocket
-- **Multi-Node Dashboard**: Pump, Motor, Compressor, and Spare Node
-- **Composite Health Index**: 0-100% score updated in real-time
-- **Dynamic Status**: Auto-categorization (Healthy / Warning / Critical)
-- **ML Insights Panel**: Shows anomaly scores, RUL hours, and fault diagnosis
+### 🛡️ Operational Resilience & Closed-Loop Control
+* **Auto-Protect Mechanics**: When a primary active node's Health Index drops below 60%, the backend triggers an automated safety sequence, shutting down the failing asset and activating a redundant **Standby Spare Node** in real-time.
+* **Failover Cooldowns & Throttling**: Ensures stable operation and prevents alert spam or rapid toggling caused by transient sensor spikes.
 
-### ⚠️ **Fault Simulation & Control**
-- **Fault Injection Console**: Manually inject Overheating, Bearing Wear, Misalignment, Overload
-- **Physics-Based Degradation**: Realistic sensor drift mimicking real-world failures
-- **Repair Workflow**: One-click repair restores node health and releases spare
-- **Auto-Protect**: Automatic spare activation when health drops below 60%
-- **System Response Banner**: Visual alerts for critical conditions
+### 📧 SMTP Notification Dispatch
+* Sends immediate, rich-text HTML alert emails containing detailed sensor telemetry tables and diagnostic reports to plant administrators using `Nodemailer` (secured with a 5-minute event cooldown to avoid inbox flooding).
 
-### 📧 **Automated Alert System**
-- **Critical Email Alerts**: Auto-sent when node becomes critical (health < 60%)
-- **Email Throttling**: 5-minute cooldown prevents spam
-- **Rich HTML Templates**: Professional alert emails with full diagnostic data
-- **SMTP Integration**: Nodemailer with Gmail (configurable)
+### 🎮 Fault Injection & Virtual Control Room
+* **Digital Twin Playground**: Features an interactive simulation console allowing operators to manually inject physical faults (Overheating, Bearing Wear, Misalignment, and Overload) to observe real-time physics-based signal degradation.
+* **One-Click Maintenance**: Supports virtual repair workflows that restore node health, log maintenance actions, and release the spare node back to standby status.
 
-### 🎨 **Industrial-Grade Dashboard**
-- **Dark Industrial Theme**: Optimized for 24/7 control room displays
-- **Animated Machine Visuals**: Rotating gears, pumps, and compressors
-- **LED-Style Indicators**: Status lights with glow effects
-- **Smooth Micro-Interactions**: Hover effects, transitions, and loading states
-- **Multi-View Interface**: Dashboard, Analytics, Team, and Settings pages
+---
 
-### 📈 **Advanced Analytics**
-- **Historical Trends**: Line charts for temperature, vibration, current over time
-- **Node Comparison**: Radar charts comparing all nodes
-- **RUL Panel**: Remaining Useful Life estimates for maintenance scheduling
-- **ML Training Metrics**: Displays training iterations and confidence growth
-- **Operator Activity Log**: Tracks injections, repairs, and system events
+## 📊 Demo / Screenshots
 
-## 🛠️ Technology Stack
+> [!NOTE]
+> Below are placeholders representing the core views of the dashboard interface.
 
-### Frontend
-- **Framework**: React 19 + Vite (fast dev server, HMR)
-- **Styling**: Vanilla CSS with CSS Variables and Keyframe Animations
-- **Charts**: Recharts (line charts, radar charts, gauges)
-- **Icons**: Lucide React (industrial iconography)
-- **State Management**: Custom React Hook (`useSimulation`) with real-time WebSocket
-- **Persistence**: LocalStorage for fault injection history and settings
-- **Real-time Communication**: Socket.IO Client
+### 1. Main Plant Overview Dashboard
+```
++-------------------------------------------------------------------------------+
+| [ASSETSENSE]                SYSTEM HEALTH: 94.2%  |  Edge Connectivity: ONLINE |
+|                                                                               |
+|  +------------------+  +------------------+  +------------------+  +-------+  |
+|  | Pump 01          |  | Induction Motor  |  | Compressor A     |  | Spare |  |
+|  | Health: 98%      |  | Health: 58%      |  | Health: 92%      |  | STANDB|  |
+|  | Status: HEALTHY  |  | Status: CRITICAL |  | Status: HEALTHY  |  | Active|  |
+|  +------------------+  +------------------+  +------------------+  +-------+  |
+|                                                                               |
+|  [⚠️ SYSTEM ALERT: Auto-Protect Switched Induction Motor to Standby Spare]      |
++-------------------------------------------------------------------------------+
+```
 
-### Backend
-- **Runtime**: Node.js (ES Modules)
-- **Framework**: Express.js
-- **ML Engine**: Custom Neural Network (`mlModel.js`) - pure JavaScript
-- **MQTT Client**: `mqtt.js` (connects to HiveMQ broker)
-- **WebSocket**: Socket.IO Server (broadcasts ML predictions to frontend)
-- **Email Service**: Nodemailer (SMTP via Gmail)
-- **Environment Config**: dotenv (.env file management)
+### 2. Multi-Parametric Radar & Trend Analytics
+* **Historical trends**: Real-time Recharts line graphs showing Temperature, Vibration, and Current.
+* **Node Comparison**: Radar chart comparing sensor deviations across all active machinery.
+* **ML Performance Panel**: Tracks online neural network training iterations and prediction source logs.
 
-### Communication Protocols
-- **MQTT**: Pub/Sub messaging (topic: `assetsense/nodes/#`)
-- **WebSocket**: Bidirectional real-time updates (Socket.IO)
-- **HTTP/REST**: Legacy alert API endpoint
+*(Visual captures such as `server/figure4_simulation.png` showcase these plotted datasets).*
 
-### Machine Learning
-- **Architecture**: Feedforward Neural Network (3 inputs → 4 hidden neurons → 2 outputs)
-- **Activation Functions**: ReLU (hidden layer), Sigmoid (output layer)
-- **Training**: Online gradient descent with backpropagation
-- **Optimization**: Xavier/Glorot weight initialization
-- **Features**: Health prediction, anomaly detection, RUL estimation, fault classification
+---
 
-## 📦 Installation & Setup
+## 🛠️ Tech Stack
 
-### 1️⃣ Clone the Repository
+| Layer | Technologies | Description |
+| :--- | :--- | :--- |
+| **Frontend** | React 19, Vite, Tailwind CSS (via PostCSS), Vanilla CSS | Ultra-fast rendering engine, industrial dark-theme dashboard, CSS keyframe animations. |
+| **Charting & Icons** | Recharts, Lucide React | High-performance telemetry line graphs, radar charts, and SVG industrial icons. |
+| **Backend API** | Node.js, Express.js | Event-driven architecture, RESTful endpoints. |
+| **Communication** | MQTT (HiveMQ Broker), WebSocket (Socket.IO) | Dual-protocol messaging (low-latency TCP pub/sub + real-time browser socket broadcasts). |
+| **Machine Learning** | Brain.js, Simple-Statistics, EWMA | Online Neural Networks, trend regressions, and stochastic drift filters. |
+| **Database** | MongoDB (via Mongoose), JSON File Fallback | Dual persistence layer: writes to MongoDB when available; falls back to `db-logs.json`. |
+| **Edge Hardware** | ESP32, PubSubClient, ArduinoJson | Physical acquisition platform deploying temperature, vibration, and current sensors. |
+
+---
+
+## 📦 Project Structure
+
+```hl
+assetsense/
+├── .env                         # Local environment configuration file (redacted)
+├── .gitignore                   # Files and directories ignored by Git
+├── package.json                 # Frontend dependencies and configuration scripts
+├── postcss.config.js            # PostCSS configuration for styling
+├── tailwind.config.js           # Tailwind configuration properties
+├── vite.config.js               # Vite compilation configuration
+├── index.html                   # HTML template loader
+├── WORKING.md                   # Operational theory and algorithm metrics documentation
+├── physical_implementation.md   # Physical hardware assembly and wiring specifications
+├── IOT_paper.pdf                # Reference scientific research paper
+├── assetsense_ieee_paper.tex    # LaTeX formatting of reference paper
+├── system_architecture.puml     # PlantUML source code for system layout
+├── code/
+│   └── code_1/
+│       └── code_1.ino           # ESP32 C++ Sketch (Sensor loop + MQTT Pub)
+├── server/
+│   ├── package.json             # Backend server dependencies and execution scripts
+│   ├── index.js                 # Express server, MQTT bridge, Socket.IO, SMTP dispatcher
+│   ├── mlModel.js               # Anomaly Detection (Isolation Forest), Neural Network, EWMA
+│   ├── database.js              # MongoDB connectivity module and local JSON fallback writer
+│   ├── verify_analytics.js      # Isolated offline validation test suite for ML models
+│   ├── verify_mqtt.js           # Test script to publish simulated MQTT packages
+│   └── figure4_simulation.png   # ML model performance and simulation chart output
+└── src/
+    ├── App.jsx                  # Root React view, sidebar routing, and page coordinator
+    ├── main.jsx                 # Client bootstrapping script
+    ├── components/              # Isolated UI components (Alerts, Charts, Cards, etc.)
+    │   ├── AlertsPanel.jsx      # Panel listing recent critical events and notifications
+    │   ├── Analytics.jsx        # Complete analytical layout including line/radar graphs
+    │   ├── FaultControlPanel.jsx# Diagnostic cockpit used to inject faults / repair nodes
+    │   ├── HealthGauge.jsx      # SVG-rendered semi-circular status gauge
+    │   ├── MachineAnimation.jsx # SVG animations showing rotating gears and fans
+    │   ├── NodeCard.jsx         # Card component showcasing metrics & ML predictions per asset
+    │   └── ...
+    ├── hooks/
+    │   └── useSimulation.js     # Custom React Hook orchestrating socket listeners & state
+    ├── styles/                  # Theme variables and structural CSS files
+    └── utils/                   # Shared arithmetic formatting helpers
+```
+
+---
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+* **Node.js** (v18.0.0 or higher)
+* **npm** (v9.0.0 or higher)
+* **MongoDB** (Optional, falls back to local file logs if not detected)
+* **Arduino IDE** (Optional, only required if deploying to real ESP32 hardware)
+
+### Step-by-Step Installation
+
+#### 1. Clone the Repository
 ```bash
 git clone https://github.com/yourusername/assetsense.git
 cd assetsense
 ```
 
-### 2️⃣ Install Frontend Dependencies
+#### 2. Install Frontend & Root Dependencies
 ```bash
 npm install
 ```
 
-### 3️⃣ Install Backend Dependencies
+#### 3. Install Backend Server Dependencies
 ```bash
 cd server
 npm install
 cd ..
 ```
 
-### 4️⃣ Configure Environment Variables
-Create a `.env` file in the root directory:
+---
+
+### Environment Variables Setup
+
+Create a `.env` file in the **root** of the project directory:
+
 ```env
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
+# Node Server Configuration
 PORT=3000
+
+# SMTP Mail Server Credentials (Gmail Example)
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-gmail-app-password
+
+# Database Connection URI (Optional)
+MONGO_URL=mongodb://127.0.0.1:27017/assetsense
 ```
 
-**Note**: For Gmail, you need to generate an [App Password](https://support.google.com/accounts/answer/185833).
+> [!TIP]
+> If utilizing Gmail, you must generate a secure 16-character **App Password** via Google Accounts -> Security -> 2-Step Verification -> App Passwords.
 
-### 5️⃣ Run the Backend (ML Engine + MQTT Bridge)
+---
+
+### Running AssetSense Locally
+
+#### Step A: Boot the Backend (MQTT Client + WebSockets + ML Engine)
+From the root directory:
 ```bash
 cd server
-node index.js
+npm run dev
 ```
-
-You should see:
-```
-🧠 ML Model: Ready for predictions
+Upon successful boot, your console will output:
+```hl
+🧠 ML Model: Ready for predictions (PRO Architecture)
+🧠 Neural Network: Pre-trained with synthetic baselines
+💾 Database: Attempting connection to mongodb://127.0.0.1:27017/assetsense...
+✅ Database: MongoDB Connected Successfully.
+Connecting to MQTT Broker...
 Connected to MQTT Broker: mqtt://broker.hivemq.com
+Subscribed to topic: assetsense/nodes/#
 AssetSense Backend running on http://localhost:3000
+ > WebSocket Server ready
+ > MQTT Bridge active
 ```
 
-### 6️⃣ Run the Frontend (Dashboard)
-In a new terminal:
+#### Step B: Boot the Frontend Dashboard
+Open a new terminal window at the root directory:
 ```bash
 npm run dev
 ```
+Open your browser and navigate to **`http://localhost:5173`**.
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+---
 
-### 7️⃣ (Optional) Connect Real ESP32 Hardware
-See [physical_implementation.md](physical_implementation.md) for wiring and code.
+## 💡 Usage
 
-Publish sensor data to MQTT topic:
-```
-assetsense/nodes/{nodeId}
-```
+### Operating the Dashboard
+1. **Monitor Node Status**: Green indicates healthy status, yellow represents a warning threshold, and red flags a critical fault.
+2. **Inject a Fault**: Locate the **Fault Simulation Console** on the dashboard. Select an asset (e.g., Pump 01) and choose a fault profile (e.g., *Bearing Wear*). Click **Inject Fault** to start the drift simulation.
+3. **Observe Automated Safeguards**: Watch the telemetry graphs. Once the health index drops below 60%, the active node will deactivate, the standby **Spare Node** will immediately transition to an active status, and an email alert will be sent to the administrator.
+4. **Trigger Repairs**: Click **Repair** on the degraded node in the simulation console. Its health will revert to 100%, and the spare node will switch back to idle status.
 
-Payload format:
+### Hardware Integration (ESP32)
+1. Wire your sensors to the ESP32 as outlined in [physical_implementation.md](physical_implementation.md).
+2. Open `code/code_1/code_1.ino` in the Arduino IDE.
+3. Replace the SSID, password, and MQTT broker IP with your local network configurations.
+4. Flash the code to the microchip. The ESP32 will immediately begin streaming live JSON payloads.
+
+---
+
+## 📡 API Documentation
+
+### REST API Endpoints
+
+#### 1. Dispatch Manual Emergency Alert
+* **Endpoint**: `POST /api/send-alert`
+* **Content-Type**: `application/json`
+* **Request Body**:
 ```json
 {
-  "nodeId": "pump-01",
-  "temp": 65.5,
-  "vib": 1.2,
-  "current": 8.3
+  "nodeName": "Induction Motor",
+  "health": 55.4,
+  "temp": 86.2,
+  "vib": 2.45,
+  "current": 12.8,
+  "fault": "Bearing Wear"
+}
+```
+* **Response (`200 OK`)**:
+```json
+{
+  "success": true
 }
 ```
 
-🎮 How to Use AssetSense
+---
 
-Observe the Dashboard
+### MQTT Telemetry Topic Structure
+* **Topic**: `assetsense/nodes/{nodeId}`
+* **Payload Schema**:
+```json
+{
+  "nodeId": "pump-01",
+  "temp": 64.2,
+  "vib": 0.35,
+  "current": 7.8,
+  "timestamp": 1248950
+}
+```
 
-Green → Healthy
+---
 
-Yellow → Warning
+### WebSocket Broadcast API (Socket.IO)
+* **Event**: `sensor_update`
+* **Enriched Metadata Output**:
+```json
+{
+  "nodeId": "pump-01",
+  "temp": 64.2,
+  "vib": 0.35,
+  "current": 7.8,
+  "health": 98.4,
+  "status": "healthy",
+  "fault": "None",
+  "rul": 1000,
+  "anomalyScore": 0.12,
+  "isAnomaly": false,
+  "mlConfidence": 0.94,
+  "predictionSource": "ML (Neural Net)",
+  "trainingCount": 42
+}
+```
 
-Red → Critical
+---
 
-Inject a Fault
+## 🧪 Testing
 
-Open Fault Injection Console
+AssetSense includes an isolated testing suite designed to validate the regression, filtering, and classification engines offline.
 
-Select Machine
+To execute the analytical test pipeline, run:
+```bash
+cd server
+node verify_analytics.js
+```
 
-Select Fault Type
+### Verification Logs Output Example
+```hl
+--- AssetSense Cloud Analytics Verification ---
+🧠 AssetSense Cloud Analytics: Initializing (PRO VERSION)...
+🧠 Neural Network: Pre-trained with synthetic baselines
+🧠 AssetSense Cloud Analytics: Online (NN + Forest + Regression)
 
-Inject and observe degradation
+[1] Training with Normal Data (Temp=40, Vib=0.5, Curr=5)...
+Model Status: {
+  algorithm: 'Isolation Forest + Brain.js NN',
+  trees: 25,
+  rulMethod: 'Linear Regression (Simple-Statistics)',
+  drift: {
+    temp: { mean: 39.851, var: 2.148 },
+    vib: { mean: 0.503, var: 0.009 },
+    current: { mean: 5.120, var: 1.042 }
+  }
+}
 
-Auto-Protect in Action
+[2] Testing Normal Point (Temp=41, Vib=0.55, Curr=5.2)...
+Normal Result: {
+  "health": 98.24501,
+  "anomalyScore": 0.14201,
+  "isAnomaly": false,
+  "rul": "> 1000h",
+  "fault": "None",
+  "confidence": 0.98421
+}
+✅ PASS: Normal data health high.
 
-When health < 60%, system switches to Spare Node automatically
+[3] Testing Anomaly Point (Temp=45, Vib=3.5, Curr=5.5)...
+AnomalyResult (Score): 0.68421
+✅ PASS: Anomaly detected (Isolation Forest Score > 0.55).
 
-Repair & Recover
+[4] Testing Health Penalty (Temp=90, Vib=0.5, Curr=5) - Sustained...
+✅ PASS: Health score penalized correctly (< 80).
+```
 
-Repair the faulty node
+To test local MQTT subscriptions and websocket relays, run:
+```bash
+node verify_mqtt.js
+```
 
-Health restores
+---
 
-Spare is released
+## 🌐 Deployment
 
-## 🔮 Future Enhancements
+### Frontend Build
+Compile the optimized static bundle of the React frontend using:
+```bash
+npm run build
+```
+This outputs compiled static files inside the `dist/` directory, which can be served on standard static servers like Nginx, Netlify, or Vercel.
 
-- [ ] **Edge ML Deployment**: Port neural network to TensorFlow Lite for ESP32
-- [ ] **OPC-UA Support**: Industrial protocol for enterprise SCADA integration
-- [ ] **Digital Twin 3D**: Three.js visualization with thermal overlays
-- [ ] **Federated Learning**: Multi-plant model aggregation without data sharing
-- [ ] **Time-Series Database**: InfluxDB for long-term sensor storage
-- [ ] **Advanced RUL Models**: LSTM networks for time-series failure prediction
-- [ ] **Mobile App**: React Native dashboard for on-the-go monitoring
-- [ ] **Cloud Deployment**: AWS IoT Core / Azure IoT Hub integration
+### Backend Hosting
+The backend service can be hosted on a cloud instance (AWS EC2, DigitalOcean, Heroku, or Render):
+1. Use **PM2** process manager to ensure continuous execution:
+   ```bash
+   npm install -g pm2
+   pm2 start index.js --name "assetsense-backend"
+   ```
+2. **Production Database Security**: Ensure the `.env` file maps to an authenticated MongoDB instance rather than public dev clusters.
+3. **MQTT Protocol Encryption**: For production hardware communication, secure HiveMQ with TLS on port `8883` instead of the public port `1883`.
 
-👨‍🎓 Who This Project Is For
+---
 
-IoT & Embedded Systems students
+## 🤝 Contributing
 
-Industry 4.0 learners
+Contributions to improve the analytical algorithms, frontend visualization, or edge hardware integrations are welcome!
 
-Predictive maintenance demonstrations
-Academic projects & capstones
+1. Fork the project repository.
+2. Create a feature branch: `git checkout -b feature/NewAlgorithm`.
+3. Check for syntax and style compliance: `npm run lint`.
+4. Commit your changes: `git commit -m 'Add new predictive feature'`.
+5. Push to the branch: `git push origin feature/NewAlgorithm`.
+6. Submit a Pull Request.
 
-Interview & portfolio showcase
+---
 
-📄 License
+## 🔮 Roadmap / Future Improvements
 
-MIT License
-Free for educational and personal use.
+* [ ] **Edge ML Deployment**: Port the lightweight Neural Network classifier to TensorFlow Lite for Microcontrollers (TFLite Micro) to enable local computation directly on the ESP32.
+* [ ] **OPC-UA Protocol Integration**: Support OPC-UA and Modbus protocols to make AssetSense compatible with enterprise SCADA and DCS pipelines.
+* [ ] **3D Digital Twin Representation**: Load CAD machine meshes using `Three.js` to showcase thermal gradients and mechanical stress zones on screen.
+* [ ] **Federated Learning Network**: Support distributed model training where multiple plants aggregate neural weights without exporting raw telemetry data.
+* [ ] **Advanced RUL Modeling**: Replace simple linear regression with an Long Short-Term Memory (LSTM) network to predict failure curves using sequential trend history.
 
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](#) details. Free for educational and personal use.
+
+---
+
+## 👥 Contact / Author
+
+* **Project Team**: AssetSense Development Team
+* **Documentation Version**: 1.1.0 (ML Enhanced)
+* **Academic Reference**: [IOT_paper.pdf](file:///e:/assestsense/IOT_paper.pdf)

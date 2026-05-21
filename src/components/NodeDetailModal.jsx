@@ -197,4 +197,3 @@ const NodeDetailModal = ({ node, onClose }) => {
 };
 
 export default NodeDetailModal;
-

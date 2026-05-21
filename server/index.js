@@ -6,12 +6,13 @@ import http from 'http';
 import { Server } from 'socket.io';
 import mqtt from 'mqtt';
 import { MLModel } from './mlModel.js';
+import { db } from './database.js'; // DB Integration
 
 dotenv.config({ path: '../.env' });
 
 // ============== ML MODEL INITIALIZATION ==============
 const mlModel = new MLModel();
-console.log('🧠 ML Model: Ready for predictions');
+console.log('🧠 ML Model: Ready for predictions (PRO Architecture)');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +61,14 @@ const sendCriticalEmail = async (data) => {
     const timestamp = new Date().toLocaleString();
 
     console.log(`Server: Sending AUTO-EMAIL for ${nodeId}`);
+
+    // Persist Alert Logic
+    db.saveAlert({
+        nodeId,
+        level: 'CRITICAL',
+        type: fault,
+        message: `Health dropped to ${health.toFixed(1)}%`
+    });
 
     const mailOptions = {
         from: `"AssetSense Alert System" <${process.env.EMAIL_USER}>`,
@@ -148,30 +157,32 @@ mqttClient.on('message', (topic, message) => {
         const current = data.current || 0;
 
         // --- ML Intelligence Layer ---
-        const mlResult = mlModel.predictHealth(temp, vib, current);
+        // Pass NodeID for RUL History context
+        const mlResult = mlModel.predictHealth(temp, vib, current, data.nodeId);
 
-        // Rule-based fallback calculation
+        // Rule-based fallback calculation (Hybrid Check)
         const tempPenalty = Math.max(0, (temp - 60) * 1.5);
         const vibPenalty = Math.max(0, (vib - 1.0) * 20);
         const currentPenalty = Math.max(0, (current - 10) * 5);
         const ruleBasedHealth = Math.max(0, Math.min(100, 100 - (0.4 * tempPenalty + 0.35 * vibPenalty + 0.25 * currentPenalty)));
 
-        // Use ML prediction if confidence is very high, otherwise fallback to rule-based
+        // Use ML prediction if confidence is high
         let calculatedHealth;
         let predictionSource;
 
-        if (mlResult.confidence > 0.95) {  // Increased threshold due to current sensor calibration
+        if (mlResult.confidence > 0.85) {
             calculatedHealth = mlResult.health;
-            predictionSource = 'ML';
+            predictionSource = 'ML (Neural Net)';
         } else {
             calculatedHealth = ruleBasedHealth;
             predictionSource = 'Rule-Based';
         }
 
-        // Ensure health is in valid range
         calculatedHealth = Math.max(0, Math.min(100, calculatedHealth));
 
-        // --- Online Learning: Train ML model with rule-based target ---
+        // --- Online Learning Override ---
+        // If Rule-based and ML diverge significantly, train NN? 
+        // For now, simpler implementation:
         mlModel.train(temp, vib, current, ruleBasedHealth / 100);
 
         // Determine status
@@ -179,7 +190,7 @@ mqttClient.on('message', (topic, message) => {
         if (calculatedHealth < 60) status = 'critical';
         else if (calculatedHealth < 80) status = 'warning';
 
-        // Enrich Payload with ML metadata
+        // Enrich Payload
         const enrichedData = {
             ...data,
             health: calculatedHealth,
@@ -194,13 +205,15 @@ mqttClient.on('message', (topic, message) => {
             processedAt: Date.now()
         };
 
+        // --- Persist Data (MongoDB/JSON) ---
+        db.saveReading(enrichedData);
+
         // --- Auto-Alert Logic ---
         if (status === 'critical') {
             const now = Date.now();
             const lastTime = lastAlertTimes[data.nodeId] || 0;
 
             if (now - lastTime > ALERT_COOLDOWN_MS) {
-                // Trigger Email
                 sendCriticalEmail(enrichedData);
                 lastAlertTimes[data.nodeId] = now;
             }
@@ -208,7 +221,7 @@ mqttClient.on('message', (topic, message) => {
 
         // Emit to Frontend
         io.emit('sensor_update', enrichedData);
-        console.log(`🧠 ML Prediction [${data.nodeId}]: Health=${calculatedHealth.toFixed(1)}% (${predictionSource}), RUL=${mlResult.rul}h, Anomaly=${mlResult.anomalyScore.toFixed(2)}, Confidence=${mlResult.confidence.toFixed(2)}`);
+        console.log(`🧠 ML Prediction [${data.nodeId}]: Health=${calculatedHealth.toFixed(1)}% (${predictionSource}), Fault=${mlResult.fault}, RUL=${mlResult.rul}`);
 
     } catch (e) {
         console.error('Error processing MQTT message:', e);

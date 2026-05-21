@@ -1,4 +1,4 @@
-# AssetSense: End-to-End Workflow Report
+git commit -m "Add end-to-end workflow documentation"# AssetSense: End-to-End Workflow Report
 **Industrial IoT Predictive Maintenance Platform**
 
 ---

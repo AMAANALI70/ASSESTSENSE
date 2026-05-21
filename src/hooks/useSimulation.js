@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
-import { sendCriticalAlert } from '../services/emailService';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
 const NODES_CONFIG = [
@@ -20,6 +19,22 @@ const generateInitialHistory = () => {
         health: 100,
     }));
 };
+
+function initializeDefaultNodes() {
+    return NODES_CONFIG.map(node => ({
+        ...node,
+        temp: 0,
+        vib: 0,
+        current: 0,
+        health: 100,
+        status: 'healthy',
+        fault: 'None',
+        rul: 1000,
+        history: generateInitialHistory(),
+        isSpare: node.type === 'spare',
+        isActive: node.type !== 'spare',
+    }));
+}
 
 export const useSimulation = () => {
     // Initialize nodes with state validation to prevents stale localStorage issues
@@ -51,50 +66,21 @@ export const useSimulation = () => {
         autoProtect: false,
     });
 
-    const emailSentFlags = useRef({});
     const socketRef = useRef(null);
 
-    function initializeDefaultNodes() {
-        return NODES_CONFIG.map(node => ({
-            ...node,
-            temp: 0,
-            vib: 0,
-            current: 0,
-            health: 100,
-            status: 'healthy',
-            fault: 'None',
-            rul: 1000,
-            history: generateInitialHistory(),
-            isSpare: node.type === 'spare',
-            isActive: node.type !== 'spare',
-        }));
-    }
-
-    useEffect(() => {
-        // --- WebSocket Connection ---
-        socketRef.current = io('http://localhost:3000');
-
-        socketRef.current.on('connect', () => {
-            console.log('Connected to WebSocket Server');
-            setSystemStatus(prev => ({ ...prev, mqtt: 'Connected to Edge' }));
-        });
-
-        socketRef.current.on('disconnect', () => {
-            console.log('Disconnected from WebSocket');
-            setSystemStatus(prev => ({ ...prev, mqtt: 'Disconnected' }));
-        });
-
-        socketRef.current.on('sensor_update', (data) => {
-            console.log('Frontend received sensor_update:', data); // Debug Log
-            handleSensorUpdate(data);
-        });
-
-        return () => {
-            if (socketRef.current) socketRef.current.disconnect();
+    const addAlert = useCallback((source, message, severity = 'warning', emailSent = false) => {
+        const newAlert = {
+            id: Date.now(),
+            source,
+            message,
+            time: new Date().toLocaleTimeString(),
+            severity,
+            emailSent
         };
+        setAlerts(prev => [newAlert, ...prev].slice(0, 10));
     }, []);
 
-    const handleSensorUpdate = (data) => {
+    const handleSensorUpdate = useCallback((data) => {
         setNodes(prevNodes => {
             // Robust matching: Try ID match, then Name match
             const nodeIndex = prevNodes.findIndex(n =>
@@ -154,25 +140,37 @@ export const useSimulation = () => {
             ...prev,
             latency: Math.floor(Math.random() * 50) + 20,
         }));
-    };
+    }, [addAlert]);
 
-    const addAlert = (source, message, severity = 'warning', emailSent = false) => {
-        const newAlert = {
-            id: Date.now(),
-            source,
-            message,
-            time: new Date().toLocaleTimeString(),
-            severity,
-            emailSent
+    useEffect(() => {
+        // --- WebSocket Connection ---
+        socketRef.current = io('http://localhost:3000');
+
+        socketRef.current.on('connect', () => {
+            console.log('Connected to WebSocket Server');
+            setSystemStatus(prev => ({ ...prev, mqtt: 'Connected to Edge' }));
+        });
+
+        socketRef.current.on('disconnect', () => {
+            console.log('Disconnected from WebSocket');
+            setSystemStatus(prev => ({ ...prev, mqtt: 'Disconnected' }));
+        });
+
+        socketRef.current.on('sensor_update', (data) => {
+            console.log('Frontend received sensor_update:', data); // Debug Log
+            handleSensorUpdate(data);
+        });
+
+        return () => {
+            if (socketRef.current) socketRef.current.disconnect();
         };
-        setAlerts(prev => [newAlert, ...prev].slice(0, 10));
-    };
+    }, [handleSensorUpdate]);
 
-    const injectFault = (nodeId, type) => {
+    const injectFault = useCallback((nodeId, type) => {
         addAlert('SYSTEM', `Manual Fault Injection: ${type} on Node ${nodeId} (Physical Override Required)`, 'warning');
-    };
+    }, [addAlert]);
 
-    const repairNode = (nodeId) => {
+    const repairNode = useCallback((nodeId) => {
         setNodes(prev => prev.map(n => {
             if (n.id === nodeId) {
                 return { ...n, fault: 'None', status: 'healthy', health: 100 };
@@ -180,7 +178,7 @@ export const useSimulation = () => {
             return n;
         }));
         addAlert('MAINTENANCE', `Node ${nodeId} Maintenance Logged`, 'success');
-    };
+    }, [addAlert]);
 
     useEffect(() => {
         localStorage.setItem('assetsense_nodes', JSON.stringify(nodes));
